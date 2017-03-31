@@ -2,6 +2,7 @@ package com.jellyape.slidedashview;
 
 import android.content.Context;
 import android.content.res.Resources;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -23,46 +24,12 @@ import android.view.View;
 
 /**
  * 恒温面板
- * TODO: 颜色值的可配置化
  * Created by terry on 3/14/17.
  */
 
 public class SlideDashView extends View {
 
 	private static final String TAG = "SlideDashView";
-
-	// 边缘画笔
-	private Paint edgePaint;
-	// 内环画笔
-	private Paint ringPaint;
-	// 刻度画笔(同时是刻度数字画笔)
-	private Paint scalePaint;
-	// 中刻度画笔
-	private Paint midScalePaint;
-	// 高亮刻度画笔
-	private Paint hightLightScalePaint;
-	// 高亮刻度数字画笔
-	private Paint hightLightScaleNumPaint;
-	// 高亮区域画笔
-	private Paint hightLightAreaPaint;
-	// 擦除
-	private Paint eraser;
-	// 默认刻度宽度
-	private static final int DEFAULT_SCALE_STROKE = 4;
-	// 大刻度默认长度
-	private static final int DEFAULT_BIG_SCALE = 90;
-	// 大刻度默认字体大小
-	private static final int DEFAULT_BIG_SCALE_TEXTSIZE = 42;
-	// 中刻度默认长度
-	private static final int DEFAULT_MID_SCALE = 80;
-	// 中刻度默认字体大小
-	private static final int DEFAULT_MID_SCALE_TEXTSIZE = 32;
-	// 小刻度默认长度
-	private static final int DEFAULT_SMALL_SCALE = 70;
-	// 记录当前的旋转度数
-	private float degree = 0;
-	// 手势检测辅助
-	private GestureDetector gestureDetector;
 	// 高亮区域角度
 	private static final int DEFAULT_HIGHTLIGHT_ANGEL = 36;
 	// 每个刻度的角度值
@@ -83,33 +50,6 @@ public class SlideDashView extends View {
 	private static final int DEFAULT_MIN_TEM = 17;
 	// 默认最高温度值
 	private static final int DEFAULT_MAX_TEM = 30;
-
-	private float width;
-	private float height;
-	private float centerX;
-	private float centerY;
-	private float radius = dpToPix(DEFAULT_RADIUS);
-	// 边缘宽度
-	private float edgeWidth = dpToPix(DEFAULT_EDGE_WIDTH);
-	// 圆环宽度
-	private float ringWidth = dpToPix(DEFAULT_RING_WIDTH);
-	// 刻度宽
-	private float scaleWidth;
-	// 大刻度长
-	private float bigScaleLong;
-	// 中刻度长
-	private float midScaleLong;
-	// 小刻度长
-	private float scaleLong;
-	// 大刻度文字大小
-	private float bigScaleTextSize;
-	// 中刻度文字大小
-	private float midScaleTextSize;
-	// 单个刻度角度值
-	private float scaleAngel;
-	// 底部边缘和刻度间距
-	private float scaleEdgeWidth = dpToPix(DEFAULT_SCALEEDGE_WIDTH);
-
 	// 默认边缘宽度13.5dp
 	private static final float DEFAULT_EDGE_WIDTH = 12f;
 	// 默认圆环宽度170dp
@@ -118,7 +58,87 @@ public class SlideDashView extends View {
 	private static final float DEFAULT_RADIUS = 387.5f;
 	// 默认底部边缘和刻度间距差
 	private static final float DEFAULT_SCALEEDGE_WIDTH = 8;
+	// 默认刻度宽度
+	private static final float DEFAULT_SCALE_WIDTH = 2f;
+	// 默认大刻度长度
+	private static final float DEFAULT_BIGSCALE_LONG = 30f;
+	// 默认中刻度长度
+	private static final float DEFAULT_MIDSCALE_LONG = 27f;
+	// 默认小刻度长度
+	private static final float DEFAULT_SCALE_LONG = 20f;
+	// 大刻度默认字体大小
+	private static final int DEFAULT_BIG_SCALE_TEXTSIZE = 28;
+	// 中刻度默认字体大小
+	private static final int DEFAULT_MID_SCALE_TEXTSIZE = 10;
+	// 默认边缘颜色值
+	private static final int DEFAULT_EDGE_COLOR = 0x2f141a20;
+	// 默认圆盘颜色值
+	private static final int DEFAULT_RING_COLOR = 0xff212932;
+	// 默认高亮渐变颜色初值
+	private static final int DEFAULT_HIGHLIGHT_START_COLOR = 0xff21303f;
+	// 默认高亮渐变颜色初值
+	private static final int DEFAULT_HIGHLIGHT_END_COLOR = 0x00000000;
+	// 默认高亮刻度颜色值
+	private static final int DEFAULT_HIGHLIGHT_SCALE_COLOR = 0xff4cb549;
+	// 默认文字颜色
+	private static final int DEFAULT_TEXT_COLOR = 0xff4e5156;
+	// 默认高亮文字颜色
+	private static final int DEFAULT_HIGHLIGHT_TEXT_COLOR = 0xffffffff;
+	// 默认低至/高至颜色
+	private static final int DEFAULT_CIRCLE_COLOR = 0xff52575a;
+	// 默认刻度颜色
+	private static final int DEFAULT_SCALE_COLOR = 0xff4e5156;
 
+	// 边缘画笔
+	private Paint edgePaint;
+	// 内环画笔
+	private Paint ringPaint;
+	// 刻度画笔(同时是刻度数字画笔)
+	private Paint scalePaint;
+	// 中刻度画笔
+	private Paint midScalePaint;
+	// 高亮刻度画笔
+	private Paint hightLightScalePaint;
+	// 高亮刻度数字画笔
+	private Paint hightLightScaleNumPaint;
+	// 高亮区域画笔
+	private Paint hightLightAreaPaint;
+	// 擦除画笔
+	private Paint eraser;
+	// 记录当前的旋转度数
+	private float degree = 0;
+	// 手势检测辅助
+	private GestureDetector gestureDetector;
+	// 宽
+	private float width;
+	// 高
+	private float height;
+	// 圆心x坐标
+	private float centerX;
+	// 圆心y坐标
+	private float centerY;
+	// 半径
+	private float radius = dpToPix(DEFAULT_RADIUS);
+	// 边缘宽度
+	private float edgeWidth = dpToPix(DEFAULT_EDGE_WIDTH);
+	// 圆环宽度
+	private float ringWidth = dpToPix(DEFAULT_RING_WIDTH);
+	// 刻度宽
+	private float scaleWidth = dpToPix(DEFAULT_SCALE_WIDTH);
+	// 大刻度长
+	private float bigScaleLong = dpToPix(DEFAULT_BIGSCALE_LONG);
+	// 中刻度长
+	private float midScaleLong = dpToPix(DEFAULT_MIDSCALE_LONG);
+	// 小刻度长
+	private float scaleLong = dpToPix(DEFAULT_SCALE_LONG);
+	// 大刻度文字大小
+	private float bigScaleTextSize = dpToPix(DEFAULT_BIG_SCALE_TEXTSIZE);
+	// 中刻度文字大小
+	private float midScaleTextSize = dpToPix(DEFAULT_MID_SCALE_TEXTSIZE);
+	// 单个刻度角度值
+	private float scaleAngel = SCALE_ANGEL;
+	// 底部边缘和刻度间距
+	private float scaleEdgeWidth = dpToPix(DEFAULT_SCALEEDGE_WIDTH);
 	// 记录滑动角度，用来在滑动完成的时候判断是否需要做微调整
 	// 具体调整是，如果停止角度刚好是半个数字是高亮区，就移动多一格，保证不会出现半个数字是高亮的情况
 	private float scrollRatio;
@@ -143,29 +163,8 @@ public class SlideDashView extends View {
 	private int highLightTextColor = DEFAULT_HIGHLIGHT_TEXT_COLOR;
 	// 低至/高至颜色
 	private int circleColor = DEFAULT_CIRCLE_COLOR;
-
-	// 默认边缘颜色值
-	private static final int DEFAULT_EDGE_COLOR = 0x2f141a20;
-	// 默认圆盘颜色值
-	private static final int DEFAULT_RING_COLOR = 0xff212932;
-	// 默认高亮渐变颜色初值
-	private static final int DEFAULT_HIGHLIGHT_START_COLOR = 0xff21303f;
-	// 默认高亮渐变颜色初值
-	private static final int DEFAULT_HIGHLIGHT_END_COLOR = 0x00000000;
-	// 默认高亮刻度颜色值
-	private static final int DEFAULT_HIGHLIGHT_SCALE_COLOR = 0xff4cb549;
-	// 默认文字颜色
-	private static final int DEFAULT_TEXT_COLOR = 0xff4e5156;
-	// 默认高亮文字颜色
-	private static final int DEFAULT_HIGHLIGHT_TEXT_COLOR = 0xffffffff;
-	// 默认低至/高至颜色
-	private static final int DEFAULT_CIRCLE_COLOR = 0xff52575a;
-	// 默认刻度颜色
-	private static final int DEFAULT_SCALE_COLOR = 0xff4e5156;
-
 	private Canvas tmpCanvas;
 	private Bitmap bitmap;
-
 	private OnScaleChangeListener onScaleChangeListener;
 
 	private GestureDetector.OnGestureListener onGestureListener = new GestureDetector.OnGestureListener() {
@@ -233,11 +232,13 @@ public class SlideDashView extends View {
 
 	public SlideDashView(Context context, AttributeSet attrs) {
 		super(context, attrs);
+		initAttrs(context, attrs);
 		init(context);
 	}
 
 	public SlideDashView(Context context, AttributeSet attrs, int defStyleAttr) {
 		super(context, attrs, defStyleAttr);
+		initAttrs(context, attrs);
 		init(context);
 	}
 
@@ -259,6 +260,70 @@ public class SlideDashView extends View {
 		}
 		tmpCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 		drawDash(canvas);
+	}
+
+	private void initAttrs(Context context, AttributeSet attrs) {
+		TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.dashview);
+		if (typedArray != null) {
+			int n = typedArray.getIndexCount();
+			for (int i = 0; i < n; i++) {
+				int attr = typedArray.getIndex(i);
+				switch (attr) {
+					case R.styleable.dashview_edgeColor:
+						edgeColor = typedArray.getColor(attr, edgeColor);
+						break;
+					case R.styleable.dashview_ringColor:
+						ringColor = typedArray.getColor(attr, ringColor);
+						break;
+					case R.styleable.dashview_hightLightStartColor:
+						hightLightStartColor = typedArray.getColor(attr, hightLightStartColor);
+						break;
+					case R.styleable.dashview_hightLightEndColor:
+						hightLightEndColor = typedArray.getColor(attr, hightLightEndColor);
+						break;
+					case R.styleable.dashview_hightLightScaleColor:
+						hightLightScaleColor = typedArray.getColor(attr, hightLightScaleColor);
+						break;
+					case R.styleable.dashview_scaleColor:
+						scaleColor = typedArray.getColor(attr, scaleColor);
+						break;
+					case R.styleable.dashview_circleColor:
+						circleColor = typedArray.getColor(attr, circleColor);
+						break;
+					case R.styleable.dashview_radius:
+						radius = typedArray.getDimension(attr, radius);
+						break;
+					case R.styleable.dashview_edgeWidth:
+						edgeWidth = typedArray.getDimension(attr, edgeWidth);
+						break;
+					case R.styleable.dashview_ringWidth:
+						ringWidth = typedArray.getDimension(attr, ringWidth);
+						break;
+					case R.styleable.dashview_scaleWidth:
+						ringWidth = typedArray.getDimension(attr, ringWidth);
+						break;
+					case R.styleable.dashview_bigScaleLong:
+						bigScaleLong = typedArray.getDimension(attr, bigScaleLong);
+						break;
+					case R.styleable.dashview_midScaleLong:
+						midScaleLong = typedArray.getDimension(attr, midScaleLong);
+						break;
+					case R.styleable.dashview_scaleLong:
+						scaleLong = typedArray.getDimension(attr, scaleLong);
+						break;
+					case R.styleable.dashview_bigScaleTextSize:
+						bigScaleTextSize = typedArray.getDimension(attr, bigScaleTextSize);
+						break;
+					case R.styleable.dashview_midScaleTextSize:
+						midScaleTextSize = typedArray.getDimension(attr, midScaleTextSize);
+						break;
+					case R.styleable.dashview_scaleAngel:
+						scaleAngel = typedArray.getDimension(attr, scaleAngel);
+						break;
+				}
+			}
+			typedArray.recycle();
+		}
 	}
 
 	private void init(Context context) {
@@ -283,7 +348,7 @@ public class SlideDashView extends View {
 		hightLightScalePaint.setAntiAlias(true);
 		hightLightScalePaint.setStyle(Paint.Style.FILL);
 		hightLightScalePaint.setColor(hightLightScaleColor);
-		hightLightScalePaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
+		hightLightScalePaint.setStrokeWidth(scaleWidth);
 		hightLightScalePaint.setTextSize(DEFAULT_BIG_SCALE_TEXTSIZE);
 		hightLightScalePaint.setTextAlign(Paint.Align.CENTER);
 
@@ -291,7 +356,7 @@ public class SlideDashView extends View {
 		hightLightScaleNumPaint.setAntiAlias(true);
 		hightLightScaleNumPaint.setStyle(Paint.Style.FILL);
 		hightLightScaleNumPaint.setColor(highLightTextColor);
-		hightLightScaleNumPaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
+		hightLightScaleNumPaint.setStrokeWidth(scaleWidth);
 		hightLightScaleNumPaint.setTextSize(DEFAULT_BIG_SCALE_TEXTSIZE);
 		hightLightScaleNumPaint.setTextAlign(Paint.Align.CENTER);
 
@@ -304,18 +369,18 @@ public class SlideDashView extends View {
 		scalePaint.setAntiAlias(true);
 		scalePaint.setStyle(Paint.Style.FILL);
 		scalePaint.setColor(scaleColor);
-		scalePaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
+		scalePaint.setStrokeWidth(scaleWidth);
 		// 初始化文字情况
-		scalePaint.setTextSize(DEFAULT_BIG_SCALE_TEXTSIZE);
+		scalePaint.setTextSize(bigScaleTextSize);
 		scalePaint.setTextAlign(Paint.Align.CENTER);
 
 		midScalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 		midScalePaint.setAntiAlias(true);
 		midScalePaint.setStyle(Paint.Style.FILL);
 		midScalePaint.setColor(scaleColor);
-		midScalePaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
+		midScalePaint.setStrokeWidth(scaleWidth);
 		// 初始化文字情况
-		midScalePaint.setTextSize(DEFAULT_MID_SCALE_TEXTSIZE);
+		midScalePaint.setTextSize(midScaleTextSize);
 		midScalePaint.setTextAlign(Paint.Align.CENTER);
 
 		ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -417,22 +482,16 @@ public class SlideDashView extends View {
 	private void drawScale(Canvas canvas) {
 		// 记录旋转总角度，用于计算是否高亮
 		float scaleDegree = 0;
-		// 1. 确认圆心
-		int width = getMeasuredWidth();
-		int height = getMeasuredHeight();
-		int radius = (int) (height * 1.3);
-		int x = width / 2;
-		int y = radius;
 		// 画小刻度
 		canvas.save();
-		int startX = width / 2;
-		int endX = startX;
+		float startX = width / 2;
+		float endX = startX;
 		float startY = edgeWidth + ringWidth - scaleEdgeWidth;
-		float endY = startY - DEFAULT_SMALL_SCALE;
+		float endY = startY - scaleLong;
 		for (int i = 0; i < (DEFAULT_SCALE_NUMBER * 10); i++) {
 			canvas.drawLine(startX, startY, endX, endY, isHightLight(scaleDegree) ? hightLightScalePaint : scalePaint);
-			canvas.rotate(SCALE_ANGEL, x, y);
-			scaleDegree += SCALE_ANGEL;
+			canvas.rotate(scaleAngel, centerX, centerY);
+			scaleDegree += scaleAngel;
 		}
 		canvas.restore();
 		// 画中刻度和大刻度
@@ -443,19 +502,19 @@ public class SlideDashView extends View {
 		startX = width / 2;
 		endX = startX;
 		startY = edgeWidth + ringWidth - scaleEdgeWidth;
-		endY = startY - DEFAULT_BIG_SCALE;
-		float midEndY = startY - DEFAULT_MID_SCALE;
+		endY = startY - bigScaleLong;
+		float midEndY = startY - midScaleLong;
 		for (int i = 0; i < DEFAULT_SCALE_NUMBER; i++) {
 			canvas.drawLine(startX, startY, endX, endY, isHightLight(scaleDegree) ? hightLightScalePaint : scalePaint);
 			// TODO: 12这个值需要改成常量或者配置值
 			canvas.drawText(String.valueOf(DEFAULT_LOW_SCALE + i), endX, endY - 12, isHightLight(scaleDegree) ?
 					hightLightScaleNumPaint : scalePaint);
-			canvas.rotate(MID_SCALE_ANGEL, x, y);
+			canvas.rotate(MID_SCALE_ANGEL, centerX, centerY);
 			scaleDegree += MID_SCALE_ANGEL;
 			canvas.drawLine(startX, startY, endX, midEndY, isHightLight(scaleDegree) ? hightLightScalePaint : midScalePaint);
 			// TODO: 是否刻画中刻度数字应该可控制
 //			canvas.drawText(String.valueOf(17 + i) + ".5", endX, endY - 12, midScalePaint);
-			canvas.rotate(MID_SCALE_ANGEL, x, y);
+			canvas.rotate(MID_SCALE_ANGEL, centerX, centerY);
 			scaleDegree += MID_SCALE_ANGEL;
 		}
 		canvas.restore();
@@ -502,9 +561,9 @@ public class SlideDashView extends View {
 			case MotionEvent.ACTION_UP:
 				if (scrollRatio == 5f || scrollRatio == -5f) {
 					if (isLeftScroll) {
-						degree -= SCALE_ANGEL;
+						degree -= scaleAngel;
 					} else {
-						degree += SCALE_ANGEL;
+						degree += scaleAngel;
 					}
 				}
 		}
@@ -534,7 +593,7 @@ public class SlideDashView extends View {
 	public void setCurrentScale(int scale) {
 		currentScale = scale;
 		log("当前刻度:" + currentScale);
-		degree = -currentScale * SCALE_ANGEL;
+		degree = -currentScale * scaleAngel;
 		if (onScaleChangeListener != null) {
 			onScaleChangeListener.onScaleChange(scale);
 		}

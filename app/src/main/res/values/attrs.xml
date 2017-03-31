@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<declare-styleable name="dashview">
+		<attr name="edgeColor" format="color" />
+		<attr name="ringColor" format="color" />
+		<attr name="hightLightStartColor" format="color" />
+		<attr name="hightLightEndColor" format="color" />
+		<attr name="hightLightScaleColor" format="color" />
+		<attr name="scaleColor" format="color" />
+		<attr name="hightLightScalecolor" format="color" />
+		<attr name="circleColor" format="color" />
+		<attr name="radius" format="dimension" />
+		<attr name="edgeWidth" format="dimension" />
+		<attr name="ringWidth" format="dimension" />
+		<attr name="scaleWidth" format="dimension" />
+		<attr name="bigScaleLong" format="dimension" />
+		<attr name="midScaleLong" format="dimension" />
+		<attr name="scaleLong" format="dimension" />
+		<attr name="bigScaleTextSize" format="dimension" />
+		<attr name="midScaleTextSize" format="dimension" />
+		<attr name="scaleAngel" format="float" />
+	</declare-styleable>
+</resources>
