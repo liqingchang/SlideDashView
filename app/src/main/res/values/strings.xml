@@ -1,3 +1,5 @@
 <resources>
 	<string name="app_name">SlideDashView</string>
+	<string name="circle_min_text">低至</string>
+	<string name="circle_max_text">高至</string>
 </resources>

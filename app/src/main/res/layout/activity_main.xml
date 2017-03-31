@@ -15,8 +15,6 @@
 
 	<com.jellyape.slidedashview.SlideDashView android:layout_width="400dp"
 	                                          android:layout_height="300dp"
-
 	/>
 
-	/>
 </RelativeLayout>

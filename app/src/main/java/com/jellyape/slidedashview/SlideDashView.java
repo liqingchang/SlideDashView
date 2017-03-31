@@ -88,7 +88,8 @@ public class SlideDashView extends View {
 	private static final int DEFAULT_CIRCLE_COLOR = 0xff52575a;
 	// 默认刻度颜色
 	private static final int DEFAULT_SCALE_COLOR = 0xff4e5156;
-
+	// 默认刻度和文字距离
+	private static final float DEFAULT_SCALETEXT_MARGIN = 10f;
 	// 边缘画笔
 	private Paint edgePaint;
 	// 内环画笔
@@ -135,6 +136,8 @@ public class SlideDashView extends View {
 	private float bigScaleTextSize = dpToPix(DEFAULT_BIG_SCALE_TEXTSIZE);
 	// 中刻度文字大小
 	private float midScaleTextSize = dpToPix(DEFAULT_MID_SCALE_TEXTSIZE);
+	// 刻度和文字距离
+	private float scaleTextMargin = dpToPix(DEFAULT_SCALETEXT_MARGIN);
 	// 单个刻度角度值
 	private float scaleAngel = SCALE_ANGEL;
 	// 底部边缘和刻度间距
@@ -163,9 +166,16 @@ public class SlideDashView extends View {
 	private int highLightTextColor = DEFAULT_HIGHLIGHT_TEXT_COLOR;
 	// 低至/高至颜色
 	private int circleColor = DEFAULT_CIRCLE_COLOR;
+
 	private Canvas tmpCanvas;
 	private Bitmap bitmap;
 	private OnScaleChangeListener onScaleChangeListener;
+	// 是否显示低至/高至圆点
+	private boolean isCircleShow = true;
+	// 是否显示高亮区域
+	private boolean isHighLightShow = true;
+	private String circleMinText;
+	private String circleMaxText;
 
 	private GestureDetector.OnGestureListener onGestureListener = new GestureDetector.OnGestureListener() {
 		@Override
@@ -263,6 +273,8 @@ public class SlideDashView extends View {
 	}
 
 	private void initAttrs(Context context, AttributeSet attrs) {
+		circleMinText = context.getString(R.string.circle_min_text);
+		circleMaxText = context.getString(R.string.circle_max_text);
 		TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.dashview);
 		if (typedArray != null) {
 			int n = typedArray.getIndexCount();
@@ -319,6 +331,18 @@ public class SlideDashView extends View {
 						break;
 					case R.styleable.dashview_scaleAngel:
 						scaleAngel = typedArray.getDimension(attr, scaleAngel);
+						break;
+					case R.styleable.dashview_isCircleShow:
+						isCircleShow = typedArray.getBoolean(attr, isCircleShow);
+						break;
+					case R.styleable.dashview_circleMinText:
+						circleMinText = typedArray.getString(attr);
+						break;
+					case R.styleable.dashview_circleMaxText:
+						circleMaxText = typedArray.getString(attr);
+						break;
+					case R.styleable.dashview_scaleTextMargin:
+						scaleTextMargin = typedArray.getDimension(attr, scaleTextMargin);
 						break;
 				}
 			}
@@ -390,8 +414,6 @@ public class SlideDashView extends View {
 
 		eraser = new Paint(Paint.ANTI_ALIAS_FLAG);
 		eraser.setAntiAlias(true);
-//		eraser.setColor(Color.TRANSPARENT);
-//		eraser.setAlpha(0xff);
 		eraser.setStyle(Paint.Style.FILL);
 		eraser.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
 
@@ -411,69 +433,63 @@ public class SlideDashView extends View {
 	private void drawDash(Canvas canvas) {
 		// 根据具体情况先旋转一次画布
 		tmpCanvas.rotate(degree, centerX, centerY);
-
-		tmpCanvas.drawCircle(centerX, centerY, radius, edgePaint);
-		tmpCanvas.drawCircle(centerX, centerY, radius - edgeWidth, ringPaint);
-		tmpCanvas.drawCircle(centerX, centerY, radius - edgeWidth - ringWidth, eraser);
-		tmpCanvas.drawCircle(centerX, centerY, radius - edgeWidth - ringWidth, edgePaint);
-		tmpCanvas.drawCircle(centerX, centerY, radius - edgeWidth - ringWidth - edgeWidth, eraser);
-
+		drawRing(tmpCanvas);
 		drawHightLightAreaFilter(tmpCanvas);
 		drawScale(tmpCanvas);
-		drawOthers(tmpCanvas);
+		drawCircle(tmpCanvas);
 		canvas.drawBitmap(bitmap, 0, 0, null);
 	}
 
-	// TODO: 部分hardcode需要更换为常量
-	// TODO: 画阴影
+	// 画圆盘
+	private void drawRing(Canvas canvas) {
+		canvas.drawCircle(centerX, centerY, radius, edgePaint);
+		canvas.drawCircle(centerX, centerY, radius - edgeWidth, ringPaint);
+		canvas.drawCircle(centerX, centerY, radius - edgeWidth - ringWidth, eraser);
+		canvas.drawCircle(centerX, centerY, radius - edgeWidth - ringWidth, edgePaint);
+		canvas.drawCircle(centerX, centerY, radius - edgeWidth - ringWidth - edgeWidth, eraser);
+	}
+
 	private void drawHightLightAreaFilter(Canvas canvas) {
+		if (isHighLightShow) {
 
-		float l = 0;
-		float r = width;
-		float t = 0;
-		float b = 2 * radius;
+			float l = 0;
+			float r = width;
+			float t = 0;
+			float b = 2 * radius;
 
-		float outerRadius = radius - edgeWidth;
-		float x1 = width / 2 - (int) (outerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
-		float y1 = radius - (int) (outerRadius * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+			float outerRadius = radius - edgeWidth;
+			float x1 = width / 2 - (int) (outerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+			float y1 = radius - (int) (outerRadius * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+			float x2 = width / 2 + (int) (outerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+			float y2 = y1;
+			float innerRadius = radius - edgeWidth - edgeWidth - ringWidth;
+			float x3 = width / 2 - (int) (innerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+			float y3 = radius - (int) (innerRadius * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+			float x4 = width / 2 + (int) (innerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+			float y4 = y3;
+			float y5 = radius - (int) ((innerRadius + edgeWidth) * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+			canvas.save();
+			// 做一个画布逆旋转确保画布固定在同一位置
+			canvas.rotate(360 - degree, centerX, centerY);
+			RectF rectF = new RectF(l, t, r, b);
+			RectF outRect = new RectF(width / 2 - outerRadius, edgeWidth, width / 2 + outerRadius, edgeWidth + 2 *
+					outerRadius);
+			RectF inRect = new RectF(width / 2 - innerRadius, edgeWidth + edgeWidth + ringWidth, width / 2 + innerRadius,
+					edgeWidth + edgeWidth + ringWidth + 2 * innerRadius);
 
-		float x2 = width / 2 + (int) (outerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
-		float y2 = y1;
-
-		float innerRadius = radius - edgeWidth - edgeWidth - ringWidth;
-		float x3 = width / 2 - (int) (innerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
-		float y3 = radius - (int) (innerRadius * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
-
-		float x4 = width / 2 + (int) (innerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
-		float y4 = y3;
-
-		float y5 = radius - (int) ((innerRadius + edgeWidth) * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
-
-
-		canvas.save();
-		// 做一个画布逆旋转确保画布固定在同一位置
-		canvas.rotate(360 - degree, centerX, centerY);
-		RectF rectF = new RectF(l, t, r, b);
-		RectF outRect = new RectF(width / 2 - outerRadius, edgeWidth, width / 2 + outerRadius, edgeWidth + 2 *
-				outerRadius);
-		RectF inRect = new RectF(width / 2 - innerRadius, edgeWidth + edgeWidth + ringWidth, width / 2 + innerRadius,
-				edgeWidth + edgeWidth + ringWidth + 2 * innerRadius);
-
-		Shader shader = new LinearGradient((float) ((x3 + x4) * 0.5), (float) y3 - 40, (float) ((x3 + x4) * 0.5),
-				(float) (y1), hightLightEndColor, hightLightStartColor, Shader.TileMode.CLAMP);
-		hightLightAreaPaint.setShader(shader);
-
-		Path path = new Path();
-		path.moveTo(x1, y1);
-		path.lineTo(x3, y3);
-		path.arcTo(inRect, 270 - 18, 36);
-		path.lineTo(x2, y2);
-		path.moveTo(x1, y1);
-		path.arcTo(outRect, 270 - 18, 36);
-
-		canvas.drawPath(path, hightLightAreaPaint);
-
-		canvas.restore();
+			Shader shader = new LinearGradient((float) ((x3 + x4) * 0.5), (float) y3 - 40, (float) ((x3 + x4) * 0.5),
+					(float) (y1), hightLightEndColor, hightLightStartColor, Shader.TileMode.CLAMP);
+			hightLightAreaPaint.setShader(shader);
+			Path path = new Path();
+			path.moveTo(x1, y1);
+			path.lineTo(x3, y3);
+			path.arcTo(inRect, 270 - 18, 36);
+			path.lineTo(x2, y2);
+			path.moveTo(x1, y1);
+			path.arcTo(outRect, 270 - 18, 36);
+			canvas.drawPath(path, hightLightAreaPaint);
+			canvas.restore();
+		}
 	}
 
 
@@ -506,14 +522,11 @@ public class SlideDashView extends View {
 		float midEndY = startY - midScaleLong;
 		for (int i = 0; i < DEFAULT_SCALE_NUMBER; i++) {
 			canvas.drawLine(startX, startY, endX, endY, isHightLight(scaleDegree) ? hightLightScalePaint : scalePaint);
-			// TODO: 12这个值需要改成常量或者配置值
-			canvas.drawText(String.valueOf(DEFAULT_LOW_SCALE + i), endX, endY - 12, isHightLight(scaleDegree) ?
+			canvas.drawText(String.valueOf(DEFAULT_LOW_SCALE + i), endX, endY - scaleTextMargin, isHightLight(scaleDegree) ?
 					hightLightScaleNumPaint : scalePaint);
 			canvas.rotate(MID_SCALE_ANGEL, centerX, centerY);
 			scaleDegree += MID_SCALE_ANGEL;
 			canvas.drawLine(startX, startY, endX, midEndY, isHightLight(scaleDegree) ? hightLightScalePaint : midScalePaint);
-			// TODO: 是否刻画中刻度数字应该可控制
-//			canvas.drawText(String.valueOf(17 + i) + ".5", endX, endY - 12, midScalePaint);
 			canvas.rotate(MID_SCALE_ANGEL, centerX, centerY);
 			scaleDegree += MID_SCALE_ANGEL;
 		}
@@ -521,24 +534,27 @@ public class SlideDashView extends View {
 
 	}
 
-	private void drawOthers(Canvas canvas) {
-		canvas.save();
-		// 做一个画布逆旋转确保画布固定在同一位置
-		canvas.rotate(360 - degree, centerX, centerY);
-		// 画低至圆心
-		double lowX = width / 2 - (Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * edgeWidth -
-				ringWidth - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
-		double lowY = radius - (Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * edgeWidth -
-				ringWidth - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
-		canvas.drawCircle((float) lowX, (float) lowY, DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
-		canvas.drawText("低至", (float) lowX, (float) lowY + DEFAULT_BIG_SCALE_TEXTSIZE + DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
-		// 画高至圆心
-		double highX = width / 2 + (Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * edgeWidth -
-				ringWidth - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
-		double highY = lowY;
-		canvas.drawCircle((float) highX, (float) highY, DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
-		canvas.drawText("高至", (float) highX, (float) highY + DEFAULT_BIG_SCALE_TEXTSIZE + DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
-
+	private void drawCircle(Canvas canvas) {
+		if (isCircleShow) {
+			canvas.save();
+			// 做一个画布逆旋转确保画布固定在同一位置
+			canvas.rotate(360 - degree, centerX, centerY);
+			// 画低至圆心
+			double lowX = width / 2 - (Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * edgeWidth -
+					ringWidth - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
+			double lowY = radius - (Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * edgeWidth -
+					ringWidth - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
+			canvas.drawCircle((float) lowX, (float) lowY, DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
+			canvas.drawText(circleMinText, (float) lowX, (float) lowY + DEFAULT_BIG_SCALE_TEXTSIZE +
+					DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
+			// 画高至圆心
+			double highX = width / 2 + (Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * edgeWidth -
+					ringWidth - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
+			double highY = lowY;
+			canvas.drawCircle((float) highX, (float) highY, DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
+			canvas.drawText(circleMaxText, (float) highX, (float) highY + DEFAULT_BIG_SCALE_TEXTSIZE +
+					DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
+		}
 	}
 
 
@@ -613,6 +629,10 @@ public class SlideDashView extends View {
 
 	public void setOnScaleChangeListener(OnScaleChangeListener onScaleChangeListener) {
 		this.onScaleChangeListener = onScaleChangeListener;
+	}
+
+	public void setCircleShow(boolean isCircleShow) {
+		this.isCircleShow = isCircleShow;
 	}
 
 	public interface OnScaleChangeListener {
