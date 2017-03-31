@@ -1,6 +1,8 @@
 package com.jellyape.slidedashview;
 
 import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorMatrix;
@@ -13,6 +15,7 @@ import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
@@ -42,16 +45,8 @@ public class SlideDashView extends View {
 	private Paint hightLightScaleNumPaint;
 	// 高亮区域画笔
 	private Paint hightLightAreaPaint;
-	// 阴影画笔
-	private Paint shadowPaint;
 	// 擦除
 	private Paint eraser;
-	// 刻度盘半径
-	private static final int RADIUS = 480;
-	// 刻度盘宽度
-	private static final int DASHWIDTH = 240;
-	// 边缘宽度
-	private static final int EDGEWIDTH = 24;
 	// 默认刻度宽度
 	private static final int DEFAULT_SCALE_STROKE = 4;
 	// 大刻度默认长度
@@ -89,17 +84,87 @@ public class SlideDashView extends View {
 	// 默认最高温度值
 	private static final int DEFAULT_MAX_TEM = 30;
 
-	private int width;
-	private int height;
-	private int centerX;
-	private int centerY;
-	private int radius;
+	private float width;
+	private float height;
+	private float centerX;
+	private float centerY;
+	private float radius = dpToPix(DEFAULT_RADIUS);
+	// 边缘宽度
+	private float edgeWidth = dpToPix(DEFAULT_EDGE_WIDTH);
+	// 圆环宽度
+	private float ringWidth = dpToPix(DEFAULT_RING_WIDTH);
+	// 刻度宽
+	private float scaleWidth;
+	// 大刻度长
+	private float bigScaleLong;
+	// 中刻度长
+	private float midScaleLong;
+	// 小刻度长
+	private float scaleLong;
+	// 大刻度文字大小
+	private float bigScaleTextSize;
+	// 中刻度文字大小
+	private float midScaleTextSize;
+	// 单个刻度角度值
+	private float scaleAngel;
+	// 底部边缘和刻度间距
+	private float scaleEdgeWidth = dpToPix(DEFAULT_SCALEEDGE_WIDTH);
+
+	// 默认边缘宽度13.5dp
+	private static final float DEFAULT_EDGE_WIDTH = 12f;
+	// 默认圆环宽度170dp
+	private static final float DEFAULT_RING_WIDTH = 85;
+	// 默认半径
+	private static final float DEFAULT_RADIUS = 387.5f;
+	// 默认底部边缘和刻度间距差
+	private static final float DEFAULT_SCALEEDGE_WIDTH = 8;
+
 	// 记录滑动角度，用来在滑动完成的时候判断是否需要做微调整
 	// 具体调整是，如果停止角度刚好是半个数字是高亮区，就移动多一格，保证不会出现半个数字是高亮的情况
 	private float scrollRatio;
 	private boolean isLeftScroll = false;
 	// 当前刻度
 	private int currentScale = DEFAULT_SCALE;
+	// 边缘颜色值
+	private int edgeColor = DEFAULT_EDGE_COLOR;
+	// 圆盘颜色值
+	private int ringColor = DEFAULT_RING_COLOR;
+	// 刻度颜色
+	private int scaleColor = DEFAULT_SCALE_COLOR;
+	// 高亮渐变颜色初值
+	private int hightLightStartColor = DEFAULT_HIGHLIGHT_START_COLOR;
+	// 高亮渐变颜色终值
+	private int hightLightEndColor = DEFAULT_HIGHLIGHT_END_COLOR;
+	// 高亮刻度颜色值
+	private int hightLightScaleColor = DEFAULT_HIGHLIGHT_SCALE_COLOR;
+	// 文字颜色
+	private int textColor = DEFAULT_TEXT_COLOR;
+	// 高亮文字颜色
+	private int highLightTextColor = DEFAULT_HIGHLIGHT_TEXT_COLOR;
+	// 低至/高至颜色
+	private int circleColor = DEFAULT_CIRCLE_COLOR;
+
+	// 默认边缘颜色值
+	private static final int DEFAULT_EDGE_COLOR = 0x2f141a20;
+	// 默认圆盘颜色值
+	private static final int DEFAULT_RING_COLOR = 0xff212932;
+	// 默认高亮渐变颜色初值
+	private static final int DEFAULT_HIGHLIGHT_START_COLOR = 0xff21303f;
+	// 默认高亮渐变颜色初值
+	private static final int DEFAULT_HIGHLIGHT_END_COLOR = 0x00000000;
+	// 默认高亮刻度颜色值
+	private static final int DEFAULT_HIGHLIGHT_SCALE_COLOR = 0xff4cb549;
+	// 默认文字颜色
+	private static final int DEFAULT_TEXT_COLOR = 0xff4e5156;
+	// 默认高亮文字颜色
+	private static final int DEFAULT_HIGHLIGHT_TEXT_COLOR = 0xffffffff;
+	// 默认低至/高至颜色
+	private static final int DEFAULT_CIRCLE_COLOR = 0xff52575a;
+	// 默认刻度颜色
+	private static final int DEFAULT_SCALE_COLOR = 0xff4e5156;
+
+	private Canvas tmpCanvas;
+	private Bitmap bitmap;
 
 	private OnScaleChangeListener onScaleChangeListener;
 
@@ -176,6 +241,25 @@ public class SlideDashView extends View {
 		init(context);
 	}
 
+	@Override
+	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+		width = getMeasuredWidth();
+		height = getMeasuredHeight();
+		centerX = width / 2;
+		centerY = radius;
+	}
+
+	@Override
+	protected void dispatchDraw(Canvas canvas) {
+		super.dispatchDraw(canvas);
+		if (bitmap == null) {
+			bitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
+			tmpCanvas = new Canvas(bitmap);
+		}
+		tmpCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+		drawDash(canvas);
+	}
 
 	private void init(Context context) {
 		gestureDetector = new GestureDetector(context, onGestureListener);
@@ -183,99 +267,6 @@ public class SlideDashView extends View {
 		gestureDetector.setIsLongpressEnabled(false);
 
 		hightLightAreaPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-		hightLightAreaPaint.setAntiAlias(true);
-		hightLightAreaPaint.setStyle(Paint.Style.FILL);
-//		hightLightAreaPaint.setStrokeWidth(30);
-
-		hightLightScalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-		hightLightScalePaint.setAntiAlias(true);
-		hightLightScalePaint.setStyle(Paint.Style.FILL);
-		hightLightScalePaint.setColor(0xff4cb549);
-		hightLightScalePaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
-		// 初始化文字情况
-		hightLightScalePaint.setTextSize(DEFAULT_BIG_SCALE_TEXTSIZE);
-		hightLightScalePaint.setTextAlign(Paint.Align.CENTER);
-
-		hightLightScaleNumPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-		hightLightScaleNumPaint.setAntiAlias(true);
-		hightLightScaleNumPaint.setStyle(Paint.Style.FILL);
-		hightLightScaleNumPaint.setColor(0xffffffff);
-		hightLightScaleNumPaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
-		// 初始化文字情况
-		hightLightScaleNumPaint.setTextSize(DEFAULT_BIG_SCALE_TEXTSIZE);
-		hightLightScaleNumPaint.setTextAlign(Paint.Align.CENTER);
-
-		edgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-		edgePaint.setAntiAlias(true);
-		edgePaint.setStyle(Paint.Style.FILL);
-		edgePaint.setColor(0xff1a2126);
-
-		scalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-		scalePaint.setAntiAlias(true);
-		scalePaint.setStyle(Paint.Style.FILL);
-		scalePaint.setColor(0xff444950);
-		scalePaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
-		// 初始化文字情况
-		scalePaint.setTextSize(DEFAULT_BIG_SCALE_TEXTSIZE);
-		scalePaint.setTextAlign(Paint.Align.CENTER);
-
-		midScalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-		midScalePaint.setAntiAlias(true);
-		midScalePaint.setStyle(Paint.Style.FILL);
-		midScalePaint.setColor(0xff444950);
-		midScalePaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
-		// 初始化文字情况
-		midScalePaint.setTextSize(DEFAULT_MID_SCALE_TEXTSIZE);
-		midScalePaint.setTextAlign(Paint.Align.CENTER);
-
-		ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-		ringPaint.setAntiAlias(true);
-		ringPaint.setStyle(Paint.Style.FILL);
-		ringPaint.setColor(0xff212932);
-
-		eraser = new Paint(Paint.ANTI_ALIAS_FLAG);
-		eraser.setAlpha(0);
-		eraser.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
-
-		shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-		shadowPaint.setShadowLayer(10, 2, 2, Color.BLACK);
-		shadowPaint.setStyle(Paint.Style.FILL);
-		shadowPaint.setColor(0x22000000);
-		shadowPaint.setStrokeWidth(12);
-
-		// 初始化degree值，取值为currentScale的值*每格角度数
-		degree = -currentScale * SCALE_ANGEL;
-
-		getCurrentTem();
-	}
-
-	@Override
-	protected void onDraw(Canvas canvas) {
-		super.onDraw(canvas);
-		drawDash(canvas);
-	}
-
-	private void drawDash(Canvas canvas) {
-		// 根据具体情况先旋转一次画布
-		canvas.rotate(degree, centerX, centerY);
-
-		canvas.drawCircle(centerX, centerY, radius, edgePaint);
-		canvas.drawCircle(centerX, centerY, radius - EDGEWIDTH, ringPaint);
-		canvas.drawCircle(centerX, centerY, radius - EDGEWIDTH - DASHWIDTH, edgePaint);
-		canvas.drawCircle(centerX, centerY, radius - EDGEWIDTH - DASHWIDTH - EDGEWIDTH, eraser);
-
-		// 画高亮区域
-		drawHightLightAreaFilter(canvas);
-
-		drawScale(canvas);
-
-		drawOthers(canvas);
-
-	}
-
-	// TODO: 部分hardcode需要更换为常量
-	// TODO: 画阴影
-	private void drawHightLightAreaFilter(Canvas canvas) {
 		ColorMatrix colorMatrix = new ColorMatrix(new float[]{
 				0, 0, 0, 0, 33,
 				0, 0, 0, 0, 64,
@@ -284,40 +275,127 @@ public class SlideDashView extends View {
 		});
 		ColorMatrixColorFilter filter = new ColorMatrixColorFilter(colorMatrix);
 		hightLightAreaPaint.setColorFilter(filter);
+		hightLightAreaPaint.setAntiAlias(true);
+		hightLightAreaPaint.setStyle(Paint.Style.FILL);
+//		hightLightAreaPaint.setStrokeWidth(30);
 
-		int l = 0;
-		int r = width;
-		int t = 0;
-		int b = 2 * radius;
+		hightLightScalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		hightLightScalePaint.setAntiAlias(true);
+		hightLightScalePaint.setStyle(Paint.Style.FILL);
+		hightLightScalePaint.setColor(hightLightScaleColor);
+		hightLightScalePaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
+		hightLightScalePaint.setTextSize(DEFAULT_BIG_SCALE_TEXTSIZE);
+		hightLightScalePaint.setTextAlign(Paint.Align.CENTER);
 
-		int outerRadius = radius - EDGEWIDTH;
-		int x1 = width / 2 - (int) (outerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
-		int y1 = radius - (int) (outerRadius * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+		hightLightScaleNumPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		hightLightScaleNumPaint.setAntiAlias(true);
+		hightLightScaleNumPaint.setStyle(Paint.Style.FILL);
+		hightLightScaleNumPaint.setColor(highLightTextColor);
+		hightLightScaleNumPaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
+		hightLightScaleNumPaint.setTextSize(DEFAULT_BIG_SCALE_TEXTSIZE);
+		hightLightScaleNumPaint.setTextAlign(Paint.Align.CENTER);
 
-		int x2 = width / 2 + (int) (outerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
-		int y2 = y1;
+		edgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		edgePaint.setAntiAlias(true);
+		edgePaint.setStyle(Paint.Style.FILL);
+		edgePaint.setColor(edgeColor);
 
-		int innerRadius = radius - EDGEWIDTH - EDGEWIDTH - DASHWIDTH;
-		int x3 = width / 2 - (int) (innerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
-		int y3 = radius - (int) (innerRadius * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+		scalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		scalePaint.setAntiAlias(true);
+		scalePaint.setStyle(Paint.Style.FILL);
+		scalePaint.setColor(scaleColor);
+		scalePaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
+		// 初始化文字情况
+		scalePaint.setTextSize(DEFAULT_BIG_SCALE_TEXTSIZE);
+		scalePaint.setTextAlign(Paint.Align.CENTER);
 
-		int x4 = width / 2 + (int) (innerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
-		int y4 = y3;
+		midScalePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		midScalePaint.setAntiAlias(true);
+		midScalePaint.setStyle(Paint.Style.FILL);
+		midScalePaint.setColor(scaleColor);
+		midScalePaint.setStrokeWidth(DEFAULT_SCALE_STROKE);
+		// 初始化文字情况
+		midScalePaint.setTextSize(DEFAULT_MID_SCALE_TEXTSIZE);
+		midScalePaint.setTextAlign(Paint.Align.CENTER);
 
-		int y5 = radius - (int) ((innerRadius + EDGEWIDTH) * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+		ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		ringPaint.setAntiAlias(true);
+		ringPaint.setStyle(Paint.Style.FILL);
+		ringPaint.setColor(ringColor);
+
+		eraser = new Paint(Paint.ANTI_ALIAS_FLAG);
+		eraser.setAntiAlias(true);
+//		eraser.setColor(Color.TRANSPARENT);
+//		eraser.setAlpha(0xff);
+		eraser.setStyle(Paint.Style.FILL);
+		eraser.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
+
+		// 初始化degree值，取值为currentScale的值*每格角度数
+		degree = -currentScale * SCALE_ANGEL;
+
+		getCurrentTem();
+	}
+
+	@Override
+	protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+		super.onLayout(changed, left, top, right, bottom);
+		bitmap = null;
+		tmpCanvas = null;
+	}
+
+	private void drawDash(Canvas canvas) {
+		// 根据具体情况先旋转一次画布
+		tmpCanvas.rotate(degree, centerX, centerY);
+
+		tmpCanvas.drawCircle(centerX, centerY, radius, edgePaint);
+		tmpCanvas.drawCircle(centerX, centerY, radius - edgeWidth, ringPaint);
+		tmpCanvas.drawCircle(centerX, centerY, radius - edgeWidth - ringWidth, eraser);
+		tmpCanvas.drawCircle(centerX, centerY, radius - edgeWidth - ringWidth, edgePaint);
+		tmpCanvas.drawCircle(centerX, centerY, radius - edgeWidth - ringWidth - edgeWidth, eraser);
+
+		drawHightLightAreaFilter(tmpCanvas);
+		drawScale(tmpCanvas);
+		drawOthers(tmpCanvas);
+		canvas.drawBitmap(bitmap, 0, 0, null);
+	}
+
+	// TODO: 部分hardcode需要更换为常量
+	// TODO: 画阴影
+	private void drawHightLightAreaFilter(Canvas canvas) {
+
+		float l = 0;
+		float r = width;
+		float t = 0;
+		float b = 2 * radius;
+
+		float outerRadius = radius - edgeWidth;
+		float x1 = width / 2 - (int) (outerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+		float y1 = radius - (int) (outerRadius * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+
+		float x2 = width / 2 + (int) (outerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+		float y2 = y1;
+
+		float innerRadius = radius - edgeWidth - edgeWidth - ringWidth;
+		float x3 = width / 2 - (int) (innerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+		float y3 = radius - (int) (innerRadius * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+
+		float x4 = width / 2 + (int) (innerRadius * Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
+		float y4 = y3;
+
+		float y5 = radius - (int) ((innerRadius + edgeWidth) * Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180));
 
 
 		canvas.save();
 		// 做一个画布逆旋转确保画布固定在同一位置
 		canvas.rotate(360 - degree, centerX, centerY);
 		RectF rectF = new RectF(l, t, r, b);
-		RectF outRect = new RectF(width / 2 - outerRadius, EDGEWIDTH, width / 2 + outerRadius, EDGEWIDTH + 2 *
+		RectF outRect = new RectF(width / 2 - outerRadius, edgeWidth, width / 2 + outerRadius, edgeWidth + 2 *
 				outerRadius);
-		RectF inRect = new RectF(width / 2 - innerRadius, EDGEWIDTH + EDGEWIDTH + DASHWIDTH, width / 2 + innerRadius,
-				EDGEWIDTH + EDGEWIDTH + DASHWIDTH + 2 * innerRadius);
+		RectF inRect = new RectF(width / 2 - innerRadius, edgeWidth + edgeWidth + ringWidth, width / 2 + innerRadius,
+				edgeWidth + edgeWidth + ringWidth + 2 * innerRadius);
 
 		Shader shader = new LinearGradient((float) ((x3 + x4) * 0.5), (float) y3 - 40, (float) ((x3 + x4) * 0.5),
-				(float) (y1), Color.TRANSPARENT, 0xff21403f, Shader.TileMode.CLAMP);
+				(float) (y1), hightLightEndColor, hightLightStartColor, Shader.TileMode.CLAMP);
 		hightLightAreaPaint.setShader(shader);
 
 		Path path = new Path();
@@ -330,17 +408,7 @@ public class SlideDashView extends View {
 
 		canvas.drawPath(path, hightLightAreaPaint);
 
-//		Path shadowPath = new Path();
-//		shadowPath.moveTo(x1, y1);
-//		shadowPath.lineTo(x3, y3);
-//		shadowPath.moveTo(x2, y2);
-//		shadowPath.lineTo(x4, y4);
-//		canvas.drawPath(shadowPath, shadowPaint);
-//		canvas.drawLine(x1,y1,x3,y5,shadowPaint);
-//		canvas.drawLine(x2,y2,x4,y5,shadowPaint);
-
 		canvas.restore();
-
 	}
 
 
@@ -359,8 +427,8 @@ public class SlideDashView extends View {
 		canvas.save();
 		int startX = width / 2;
 		int endX = startX;
-		int startY = EDGEWIDTH + DASHWIDTH - 2 * EDGEWIDTH;
-		int endY = startY - DEFAULT_SMALL_SCALE;
+		float startY = edgeWidth + ringWidth - scaleEdgeWidth;
+		float endY = startY - DEFAULT_SMALL_SCALE;
 		for (int i = 0; i < (DEFAULT_SCALE_NUMBER * 10); i++) {
 			canvas.drawLine(startX, startY, endX, endY, isHightLight(scaleDegree) ? hightLightScalePaint : scalePaint);
 			canvas.rotate(SCALE_ANGEL, x, y);
@@ -374,9 +442,9 @@ public class SlideDashView extends View {
 		// 画一条刻度
 		startX = width / 2;
 		endX = startX;
-		startY = EDGEWIDTH + DASHWIDTH - 2 * EDGEWIDTH;
+		startY = edgeWidth + ringWidth - scaleEdgeWidth;
 		endY = startY - DEFAULT_BIG_SCALE;
-		int midEndY = startY - DEFAULT_MID_SCALE;
+		float midEndY = startY - DEFAULT_MID_SCALE;
 		for (int i = 0; i < DEFAULT_SCALE_NUMBER; i++) {
 			canvas.drawLine(startX, startY, endX, endY, isHightLight(scaleDegree) ? hightLightScalePaint : scalePaint);
 			// TODO: 12这个值需要改成常量或者配置值
@@ -399,15 +467,15 @@ public class SlideDashView extends View {
 		// 做一个画布逆旋转确保画布固定在同一位置
 		canvas.rotate(360 - degree, centerX, centerY);
 		// 画低至圆心
-		double lowX = width / 2 - (Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * EDGEWIDTH -
-				DASHWIDTH - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
-		double lowY = radius - (Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * EDGEWIDTH -
-				DASHWIDTH - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
+		double lowX = width / 2 - (Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * edgeWidth -
+				ringWidth - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
+		double lowY = radius - (Math.cos(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * edgeWidth -
+				ringWidth - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
 		canvas.drawCircle((float) lowX, (float) lowY, DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
 		canvas.drawText("低至", (float) lowX, (float) lowY + DEFAULT_BIG_SCALE_TEXTSIZE + DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
 		// 画高至圆心
-		double highX = width / 2 + (Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * EDGEWIDTH -
-				DASHWIDTH - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
+		double highX = width / 2 + (Math.sin(Math.PI * DEFAULT_HIGHTLIGHT_ANGEL / 2 / 180) * (radius - 2 * edgeWidth -
+				ringWidth - DEFAULT_RADIUS_HIGHLIGHT_CIRCLE));
 		double highY = lowY;
 		canvas.drawCircle((float) highX, (float) highY, DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
 		canvas.drawText("高至", (float) highX, (float) highY + DEFAULT_BIG_SCALE_TEXTSIZE + DEFAULT_RADIUS_HIGHLIGHT_CIRCLE, scalePaint);
@@ -419,7 +487,7 @@ public class SlideDashView extends View {
 		// 实际偏差
 		float realDegree = Math.abs(degree + scaleDegree);
 		int angel = DEFAULT_HIGHTLIGHT_ANGEL / 2;
-		return realDegree < angel;
+		return realDegree < angel - 0.1;
 //
 //		return (DEFAULT_HIGHTLIGHT_ANGEL / 2 + degree > scaleDegree) && (scaleDegree <
 //				DEFAULT_HIGHTLIGHT_ANGEL
@@ -441,17 +509,6 @@ public class SlideDashView extends View {
 				}
 		}
 		return ret;
-	}
-
-	@Override
-	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-		width = getMeasuredWidth();
-		height = getMeasuredHeight();
-		centerX = width / 2;
-		// TODO: 1.3倍改用常量
-		radius = (int) (height * 1.3);
-		centerY = radius;
 	}
 
 	/**
@@ -487,6 +544,12 @@ public class SlideDashView extends View {
 
 	private void log(String log) {
 		Log.i(TAG, log);
+	}
+
+	private float dpToPix(float dp) {
+		Resources resources = getContext().getResources();
+		DisplayMetrics metrics = resources.getDisplayMetrics();
+		return dp * ((float) metrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT);
 	}
 
 	public void setOnScaleChangeListener(OnScaleChangeListener onScaleChangeListener) {
